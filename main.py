@@ -1,5 +1,7 @@
 import pandas as pd
 
+from CorrelationAnalysis import analyze_diagnosis_relation
+from GenotypeAnalysis import analyze_genotypes
 from HardyWeinbergTest import hardy_weinberg_test
 
 
@@ -49,10 +51,14 @@ def main():
     df.dropna(inplace=True)
 
     # 7. Výpis na kontrolu
-    print(df)
+    #print(df)
     hardy_weinberg_test(df, "HFE_C282Y")
     hardy_weinberg_test(df, "HFE_H63D")
     hardy_weinberg_test(df, "HFE_S65C")
+    analyze_genotypes(df)
+    analyze_diagnosis_relation(df)
+
+
 
 if __name__ == "__main__":
     main()
