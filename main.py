@@ -1,16 +1,49 @@
-# This is a sample Python script.
+import pandas as pd
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+def main():
+    # 1. Načítanie súboru, vynechanie druhého stĺpca (index 1)
+    df = pd.read_excel(
+        "SSBU25_dataset.xls",
+        engine="xlrd",
+        usecols=[0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        dtype={
+            0: str,
+            2: str,
+            3: str,
+            4: str,
+            5: str
+        }
+    )
 
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.expand_frame_repr', False)
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+    # 2. Nastavenie názvov stĺpcov podľa obrázka
+    df.columns = [
+        "id",
+        "validovany_datum", "validovany_cas",
+        "prijem_datum", "prijem_cas",
+        "pohlavie",
+        "vek",
+        "diagnoza_MKCH10",
+        "HFE_H63D",
+        "HFE_S65C",
+        "HFE_C282Y"
+    ]
 
+    # 3. Spojenie dátumu a času do jedného datetime stĺpca
+    df["validovany_vysledok"] = (df["validovany_datum"].astype(str) + " " + df["validovany_cas"].astype(str))
+    df["prijem_vzorky"] = (df["prijem_datum"].astype(str) + " " + df["prijem_cas"].astype(str))
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+    # 4. Vymazanie pôvodných stĺpcov (už ich nepotrebujeme)
+    df.drop(columns=["validovany_datum", "validovany_cas", "prijem_datum", "prijem_cas"], inplace=True)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    # 5. Úprava veku (zmena čiarky na bodku a konverzia na float)
+    df["vek"] = df["vek"].astype(str).str.replace(",", ".").astype(float)
+
+    # 6. Výpis na kontrolu
+    print(df)
+
+if __name__ == "__main__":
+    main()
