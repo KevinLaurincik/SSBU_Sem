@@ -1,5 +1,8 @@
 import pandas as pd
 
+from HardyWeinbergTest import hardy_weinberg_test
+
+
 def main():
     # 1. Načítanie súboru, vynechanie druhého stĺpca (index 1)
     df = pd.read_excel(
@@ -42,8 +45,15 @@ def main():
     # 5. Úprava veku (zmena čiarky na bodku a konverzia na float)
     df["vek"] = df["vek"].astype(str).str.replace(",", ".").astype(float)
 
-    # 6. Výpis na kontrolu
+    # 6. Očistenie dát – ak je niečo NaN v hociktorom stĺpci, celý riadok sa vyhodí
+    df.dropna(inplace=True)
+
+    # 7. Výpis na kontrolu
     print(df)
+    hardy_weinberg_test(df, "HFE_C282Y")
+    hardy_weinberg_test(df, "HFE_H63D")
+    hardy_weinberg_test(df, "HFE_S65C")
 
 if __name__ == "__main__":
     main()
+
