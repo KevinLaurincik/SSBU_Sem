@@ -20,7 +20,7 @@ def analyze_genotypes(df):
     ]
 
     predisponovani = df[
-        (df["HFE_C282Y"].str.lower() == "homozygot") |
+        (df["HFE_C282Y"].str.lower() == "mutant") |
         ((df["HFE_C282Y"].str.lower() == "heterozygot") & (df["HFE_H63D"].str.lower() == "heterozygot")) |
         ((df["HFE_C282Y"].str.lower() == "heterozygot") & (df["HFE_S65C"].str.lower() == "heterozygot"))
     ]

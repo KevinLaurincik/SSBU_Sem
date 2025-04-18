@@ -11,7 +11,7 @@ def analyze_diagnosis_relation(df):
         print(f"\n🧬 Vzťah medzi {gene} a pečeňovými diagnózami:")
 
         # Vytvoríme binárne skupiny: má mutáciu alebo nie
-        df["mutacia"] = df[gene].str.lower().isin(["heterozygot", "homozygot"])
+        df["mutacia"] = df[gene].str.lower().isin(["heterozygot", "mutant"])
 
         # Kontingenčná tabuľka
         contingency = pd.crosstab(df["mutacia"], df["pecenove_ochorenie"])

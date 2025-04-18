@@ -3,6 +3,7 @@ import pandas as pd
 from CorrelationAnalysis import analyze_diagnosis_relation
 from GenotypeAnalysis import analyze_genotypes
 from HardyWeinbergTest import hardy_weinberg_test
+from Plotter import plot_genotype_distributions
 
 
 def main():
@@ -57,6 +58,8 @@ def main():
     hardy_weinberg_test(df, "HFE_S65C")
     analyze_genotypes(df)
     analyze_diagnosis_relation(df)
+    plot_genotype_distributions(df)
+
 
 
 

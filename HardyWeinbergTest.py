@@ -31,8 +31,8 @@ def hardy_weinberg_test(df, column):
     chi2, pval = chisquare(f_obs=observed, f_exp=expected)
 
     print(f"\n🧬 Hardy-Weinberg test pre {column}:")
-    print(f"Pozorované:  normal={count_nn}, heterozygot={count_nm}, homozygot={count_mm}")
-    print(f"Očakávané:  normal={expected_nn:.2f}, heterozygot={expected_nm:.2f}, homozygot={expected_mm:.2f}")
+    print(f"Pozorované:  normal={count_nn}, heterozygot={count_nm}, mutant={count_mm}")
+    print(f"Očakávané:  normal={expected_nn:.2f}, heterozygot={expected_nm:.2f}, mutant={expected_mm:.2f}")
     print(f"Chi² = {chi2:.4f}, p-hodnota = {pval:.4f}")
 
     if pval < 0.05:
