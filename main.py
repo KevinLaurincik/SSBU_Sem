@@ -1,6 +1,7 @@
 import pandas as pd
 
 from CorrelationAnalysis import analyze_diagnosis_relation
+from DiagnosisAnalysis import analyzuj_diagnozy_a_vyvoj_v_case
 from GenotypeAnalysis import analyze_genotypes
 from HardyWeinbergTest import hardy_weinberg_test
 from Plotter import plot_genotype_distributions
@@ -38,9 +39,18 @@ def main():
         "HFE_C282Y"
     ]
 
-    # 3. Spojenie dátumu a času do jedného datetime stĺpca
-    df["validovany_vysledok"] = (df["validovany_datum"].astype(str) + " " + df["validovany_cas"].astype(str))
-    df["prijem_vzorky"] = (df["prijem_datum"].astype(str) + " " + df["prijem_cas"].astype(str))
+    # 3. Spojenie dátumu a času do jedného stĺpca a konverzia na datetime
+    df["validovany_vysledok"] = pd.to_datetime(
+        df["validovany_datum"].astype(str) + " " + df["validovany_cas"].astype(str),
+        format="%d.%m.%Y %H:%M",
+        errors="coerce"
+    )
+
+    df["prijem_vzorky"] = pd.to_datetime(
+        df["prijem_datum"].astype(str) + " " + df["prijem_cas"].astype(str),
+        format="%d.%m.%Y %H:%M",
+        errors="coerce"
+    )
 
     # 4. Vymazanie pôvodných stĺpcov (už ich nepotrebujeme)
     df.drop(columns=["validovany_datum", "validovany_cas", "prijem_datum", "prijem_cas"], inplace=True)
@@ -51,18 +61,16 @@ def main():
     # 6. Očistenie dát – ak je niečo NaN v hociktorom stĺpci, celý riadok sa vyhodí
     df.dropna(inplace=True)
 
-    # 7. Výpis na kontrolu
-    #print(df)
+    # 7. Spustenie všetkých analýz
     hardy_weinberg_test(df, "HFE_C282Y")
     hardy_weinberg_test(df, "HFE_H63D")
     hardy_weinberg_test(df, "HFE_S65C")
+
     analyze_genotypes(df)
     analyze_diagnosis_relation(df)
     plot_genotype_distributions(df)
-
-
+    analyzuj_diagnozy_a_vyvoj_v_case(df)
 
 
 if __name__ == "__main__":
     main()
-
