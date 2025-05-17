@@ -66,10 +66,10 @@ def main():
     hardy_weinberg_test(df, "HFE_H63D")
     hardy_weinberg_test(df, "HFE_S65C")
 
-    analyze_genotypes(df)
+    ##analyze_genotypes(df)
     analyze_diagnosis_relation(df)
-    plot_genotype_distributions(df)
-    analyzuj_diagnozy_a_vyvoj_v_case(df)
+    ##plot_genotype_distributions(df)
+    ##analyzuj_diagnozy_a_vyvoj_v_case(df)
 
 
 if __name__ == "__main__":

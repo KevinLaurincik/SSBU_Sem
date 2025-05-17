@@ -8,7 +8,7 @@ def hardy_weinberg_test(df, column):
     # Spočítanie výskytov
     count_nn = (genotypes == "normal").sum()
     count_nm = (genotypes == "heterozygot").sum()
-    count_mm = (genotypes == "mutant").sum()  # ak vôbec existuje
+    count_mm = (genotypes == "mutant").sum()
 
     n = count_nn + count_nm + count_mm
     if n == 0:
