@@ -13,7 +13,7 @@ def hardy_weinberg_test(df, column):
     n = count_nn + count_nm + count_mm
     if n == 0:
         print(f"Žiadne záznamy pre {column}")
-        return
+        return f"Žiadne záznamy pre {column}"
 
     # Vypočítaj frekvencie alelov
     p = (2 * count_nn + count_nm) / (2 * n)
@@ -35,8 +35,19 @@ def hardy_weinberg_test(df, column):
     print(f"Očakávané:  normal={expected_nn:.2f}, heterozygot={expected_nm:.2f}, mutant={expected_mm:.2f}")
     print(f"Chi² = {chi2:.4f}, p-hodnota = {pval:.4f}")
 
+    result = (
+        f"\n🧬 Hardy-Weinberg test pre {column}:\n"
+        f"Pozorované:  normal={count_nn}, heterozygot={count_nm}, mutant={count_mm}\n"
+        f"Očakávané:  normal={expected_nn:.2f}, heterozygot={expected_nm:.2f}, mutant={expected_mm:.2f}\n"
+        f"Chi² = {chi2:.4f}, p-hodnota = {pval:.4f}\n"
+    )
+
     if pval < 0.05:
         print("❌ Genotypy NIE sú v Hardy-Weinbergovej rovnováhe (p < 0.05)")
+        result += "❌ Genotypy NIE sú v Hardy-Weinbergovej rovnováhe (p < 0.05)"
     else:
         print("✅ Genotypy sú v Hardy-Weinbergovej rovnováhe (p ≥ 0.05)")
+        result += "✅ Genotypy sú v Hardy-Weinbergovej rovnováhe (p ≥ 0.05)"
+
+    return result
 
