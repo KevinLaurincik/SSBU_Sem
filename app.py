@@ -167,8 +167,17 @@ def server(input: Inputs, output: Outputs, session: Session):
         df = clean_data()
         if df.empty:
             return None
+
         gene = input.gene_plot()
         plot_type = input.plot_type()
+
+        # Skontroluj, či sú null hodnoty v relevantných stĺpcoch
+        if plot_type == "Boxplot (vek)":
+            if df[[gene, "vek"]].isnull().values.any():
+                return None
+        elif plot_type == "Rozdelenie podľa pohlavia":
+            if df[[gene, "pohlavie"]].isnull().values.any():
+                return None
 
         fig, ax = plt.subplots(figsize=(6, 4))
         sns.set(style="whitegrid")
@@ -178,14 +187,12 @@ def server(input: Inputs, output: Outputs, session: Session):
             ax.set_title(f"Vek podľa genotypu {gene}")
 
             # Add count annotations for boxplot
-            counts = df[gene].value_counts().loc[["normal", "heterozygot", "mutant"]]
+            counts = df[gene].value_counts().reindex(["normal", "heterozygot", "mutant"]).fillna(0).astype(int)
             for i, count in enumerate(counts):
-                ax.text(i, ax.get_ylim()[0], f'n={count}',
-                        ha='center', va='bottom', color='black', fontsize=9)
+                ax.text(i, ax.get_ylim()[0], f'n={count}', ha='center', va='bottom', color='black', fontsize=9)
 
         elif plot_type == "Rozdelenie podľa pohlavia":
-            sns.countplot(data=df, x=gene, hue="pohlavie",
-                          order=["normal", "heterozygot", "mutant"], ax=ax)
+            sns.countplot(data=df, x=gene, hue="pohlavie", order=["normal", "heterozygot", "mutant"], ax=ax)
             ax.set_title(f"Pohlavie podľa genotypu {gene}")
             ax.legend(title="Pohlavie")
 
