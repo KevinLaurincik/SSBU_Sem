@@ -1,57 +1,87 @@
-from scipy.stats import chi2_contingency
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.stats import chi2_contingency
+
 
 def analyze_diagnosis_relation(df):
-    print("\n--- Súvislosť HFE mutácií s chorobami pečene (K76.0, K75.9) ---")
-
-    # Vytvor nový stĺpec: má ochorenie pečene (True/False)
+    # Prepare liver disease column
     df["pecenove_ochorenie"] = df["diagnoza_MKCH10"].str.upper().isin(["K76.0", "K75.9"])
 
-    for gene in ["HFE_C282Y", "HFE_H63D", "HFE_S65C"]:
-        print(f"\n🧬 Vzťah medzi {gene} a pečeňovými diagnózami:")
+    # Check if we have both cases and controls
+    if df["pecenove_ochorenie"].nunique() < 2:
+        plt.figure(figsize=(8, 4))
+        plt.text(0.5, 0.5, "Nedostatok dát\n(chýbajú pacienti s alebo bez pečeňového ochorenia)",
+                 ha='center', va='center', fontsize=12)
+        plt.axis('off')
+        plt.tight_layout()
+        return [plt.gcf()]
 
-        # Vytvoríme binárne skupiny: má mutáciu alebo nie
+    results = []
+
+    for gene in ["HFE_C282Y", "HFE_H63D", "HFE_S65C"]:
+        # Prepare mutation status (True = has mutation)
         df["mutacia"] = df[gene].str.lower().isin(["heterozygot", "mutant"])
 
-        # Kontingenčná tabuľka
+        # Create contingency table
         contingency = pd.crosstab(df["mutacia"], df["pecenove_ochorenie"])
 
-        print("\nKontingenčná tabuľka:")
-        print(contingency)
+        # Add column names if missing (can happen with all True/False)
+        if contingency.shape[1] < 2:
+            for val in [False, True]:
+                if val not in contingency.columns:
+                    contingency[val] = 0
+            contingency = contingency[[False, True]]  # Ensure correct order
 
-        # Chi-squared test
-        chi2, p, dof, expected = chi2_contingency(contingency)
+        # Calculate percentages for visualization
+        total_counts = contingency.sum(axis=1)
+        percent_with_disease = (contingency[True] / total_counts * 100).round(1)
 
-        print(f"\nChi² = {chi2:.4f}, p-hodnota = {p:.4f}")
-        if p < 0.05:
-            print("❗️Existuje štatisticky významná súvislosť (p < 0.05)")
+        # Prepare data for plotting
+        plot_data = pd.DataFrame({
+            'Mutácia': ['Bez mutácie', 'S mutáciou'],
+            'Percento s ochorením': percent_with_disease.values,
+            'Celkový počet': total_counts.values
+        })
+
+        # Create visualization
+        plt.figure(figsize=(8, 5))
+
+        # Bar plot
+        bars = plt.bar(plot_data['Mutácia'], plot_data['Percento s ochorením'],
+                       color=['#4c72b0', '#c44e52'])
+
+        # Add percentages on top of bars
+        for bar in bars:
+            height = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width() / 2., height,
+                     f'{height}%',
+                     ha='center', va='bottom')
+
+        # Add sample sizes below x-axis
+        for i, count in enumerate(plot_data['Celkový počet']):
+            plt.text(i, -5, f'n={count}', ha='center', va='top')
+
+        plt.title(f"Výskyt pečeňových ochorení podľa prítomnosti {gene} mutácie")
+        plt.ylabel("Percento pacientov s ochorením pečene (%)")
+        plt.ylim(0, min(100, max(plot_data['Percento s ochorením']) * 1.3))
+
+        # Statistical test info
+        if contingency.shape == (2, 2):
+            chi2, p, dof, expected = chi2_contingency(contingency)
+            test_result = f"Chi² = {chi2:.2f}, p = {p:.4f}"
+            if p < 0.05:
+                test_result += " (významná súvislosť)"
+            else:
+                test_result += " (žiadna významná súvislosť)"
         else:
-            print("✅ Žiadna významná súvislosť (p ≥ 0.05)")
+            test_result = "⚠️ Nedostatok dát pre štatistický test"
 
-        # --- Graf ---
-        # Pre lepšie čítanie vytvoríme % pacientov s ochorením a bez ochorenia pre obidve skupiny (mutácia áno/nie)
-        counts = contingency.values
-        # Kontingenčná tabuľka má riadky: mutácia = False/True, stĺpce: ochorenie = False/True
-        groups = ["Bez mutácie", "S mutáciou"]
-        labels = ["Bez pečeňového ochorenia", "S pečeňovým ochorením"]
-
-        # Percentá v rámci každej skupiny (riadku)
-        percents = counts / counts.sum(axis=1, keepdims=True) * 100
-
-        plt.figure(figsize=(6,4))
-        bar1 = plt.bar(groups, percents[:, 0], label=labels[0], color="#4c72b0")
-        bar2 = plt.bar(groups, percents[:, 1], bottom=percents[:, 0], label=labels[1], color="#c44e52")
-
-        plt.ylabel("Percento (%)")
-        plt.title(f"Vzťah medzi {gene} mutáciou a pečeňovým ochorením")
-        plt.ylim(0, 100)
-        plt.legend()
-
-        # Pridanie hodnôt nad stĺpcami
-        for i in range(len(groups)):
-            plt.text(i, percents[i,0]/2, f"{percents[i,0]:.1f}%", ha='center', va='center', color='white', fontsize=10)
-            plt.text(i, percents[i,0] + percents[i,1]/2, f"{percents[i,1]:.1f}%", ha='center', va='center', color='white', fontsize=10)
+        plt.text(0.5, 0.95, test_result,
+                 transform=plt.gca().transAxes,
+                 ha='center', va='top',
+                 bbox=dict(facecolor='white', alpha=0.8))
 
         plt.tight_layout()
-        plt.show()
+        results.append(plt.gcf())
+
+    return results

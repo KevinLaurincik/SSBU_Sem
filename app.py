@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from shiny import App, Inputs, Outputs, Session, reactive, render
 from shiny.types import FileInfo
+from scipy.stats import chi2_contingency
 
 from app_ui import app_ui
 from CorrelationAnalysis import analyze_diagnosis_relation
@@ -49,10 +50,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         df["vek"] = df["vek"].astype(str).str.replace(",", ".").astype(float)
         df.dropna(inplace=True)
 
-        # Aktualizácia zastaraných kódov
-        df["diagnoza_MKCH10"] = df["diagnoza_MKCH10"].replace({
-            "K76.0": "E66.9", "K75.9": "K75.8"
-        })
+        # Keep original liver disease codes for analysis
+        # df["diagnoza_MKCH10"] = df["diagnoza_MKCH10"].replace({
+        #     "K76.0": "E66.9", "K75.9": "K75.8"
+        # })
 
         return df
 
@@ -70,12 +71,52 @@ def server(input: Inputs, output: Outputs, session: Session):
             return "Žiadne dáta"
         return analyze_genotypes(df)
 
-    @render.text
-    def Zavislost():
+    @render.plot
+    def diagnosis_relation_plot():
         df = clean_data()
         if df.empty:
-            return "Žiadne dáta"
-        return analyze_diagnosis_relation(df)
+            return None
+
+        # Get the plots from the analysis function
+        plots = analyze_diagnosis_relation(df)
+
+        # Return the first plot (or could implement a selector for multiple genes)
+        if plots and len(plots) > 0:
+            return plots[0]
+        return None
+
+    @render.text
+    def diagnosis_relation_text():
+        df = clean_data()
+        if df.empty:
+            return "Žiadne dáta k dispozícii"
+
+        # Prepare text output
+        output = []
+        df["pecenove_ochorenie"] = df["diagnoza_MKCH10"].str.upper().isin(["K76.0", "K75.9"])
+
+        if df["pecenove_ochorenie"].nunique() < 2:
+            return "⚠️ Chýbajú dáta pre analýzu - potrebné sú pacienti s aj bez pečeňového ochorenia"
+
+        for gene in ["HFE_C282Y", "HFE_H63D", "HFE_S65C"]:
+            df["mutacia"] = df[gene].str.lower().isin(["heterozygot", "mutant"])
+            contingency = pd.crosstab(df["mutacia"], df["pecenove_ochorenie"])
+
+            output.append(f"\n🧬 Analýza pre {gene}:")
+            output.append(str(contingency))
+
+            if contingency.shape == (2, 2):
+                chi2, p, dof, expected = chi2_contingency(contingency)
+                result = f"Chi² = {chi2:.2f}, p = {p:.4f}"
+                if p < 0.05:
+                    result += " (významná súvislosť)"
+                else:
+                    result += " (žiadna významná súvislosť)"
+                output.append(result)
+            else:
+                output.append("⚠️ Nedostatok dát pre štatistický test")
+
+        return "\n".join(output)
 
     @render.plot
     def vCase():
@@ -105,9 +146,9 @@ def server(input: Inputs, output: Outputs, session: Session):
             h63d = row["HFE_H63D"].lower()
             s65c = row["HFE_S65C"].lower()
             if c282y == "mutant" or \
-               (c282y == "heterozygot" and h63d == "heterozygot") or \
-               (c282y == "heterozygot" and s65c == "heterozygot") or \
-               (h63d == "heterozygot" and s65c == "heterozygot"):
+                    (c282y == "heterozygot" and h63d == "heterozygot") or \
+                    (c282y == "heterozygot" and s65c == "heterozygot") or \
+                    (h63d == "heterozygot" and s65c == "heterozygot"):
                 return "predispozícia"
             elif c282y == "heterozygot" or h63d == "heterozygot" or s65c == "heterozygot":
                 return "prenášač"
@@ -119,7 +160,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         df["stav"] = df.apply(classify_patient, axis=1)
         counts = df["stav"].value_counts()
         total = len(df)
-        return "\n".join([f"{cat.capitalize()}: {cnt} ({100*cnt/total:.2f}%)" for cat, cnt in counts.items()])
+        return "\n".join([f"{cat.capitalize()}: {cnt} ({100 * cnt / total:.2f}%)" for cat, cnt in counts.items()])
 
     @render.plot
     def genotype_plot():
@@ -135,10 +176,26 @@ def server(input: Inputs, output: Outputs, session: Session):
         if plot_type == "Boxplot (vek)":
             sns.boxplot(data=df, x=gene, y="vek", order=["normal", "heterozygot", "mutant"], ax=ax)
             ax.set_title(f"Vek podľa genotypu {gene}")
+
+            # Add count annotations for boxplot
+            counts = df[gene].value_counts().loc[["normal", "heterozygot", "mutant"]]
+            for i, count in enumerate(counts):
+                ax.text(i, ax.get_ylim()[0], f'n={count}',
+                        ha='center', va='bottom', color='black', fontsize=9)
+
         elif plot_type == "Rozdelenie podľa pohlavia":
-            sns.countplot(data=df, x=gene, hue="pohlavie", order=["normal", "heterozygot", "mutant"], ax=ax)
+            sns.countplot(data=df, x=gene, hue="pohlavie",
+                          order=["normal", "heterozygot", "mutant"], ax=ax)
             ax.set_title(f"Pohlavie podľa genotypu {gene}")
             ax.legend(title="Pohlavie")
+
+            # Add count annotations for countplot
+            for container in ax.containers:
+                ax.bar_label(container, fmt='%.0f', label_type='edge', padding=2)
+
+            # Adjust ylim to make room for labels
+            y_max = max([p.get_height() for p in ax.patches])
+            ax.set_ylim(0, y_max * 1.1)
 
         plt.tight_layout()
         return fig
@@ -147,6 +204,34 @@ def server(input: Inputs, output: Outputs, session: Session):
     def summary():
         df = clean_data()
         return df if input.show_data() else pd.DataFrame()
+
+    @render.plot
+    def genotype_barplot():
+        df = clean_data()
+        if df.empty:
+            return None
+
+        gene = input.selected_gene()
+        genotypes = df[gene].str.lower()
+        total = genotypes.count()
+        counts = genotypes.value_counts()
+
+        labels = counts.index.tolist()
+        sizes = [100 * c / total for c in counts.values]
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+        bars = ax.bar(labels, sizes, color=['#4c72b0', '#55a868', '#c44e52'][:len(labels)])
+        ax.set_title(f"Percentuálne zastúpenie genotypov – {gene}")
+        ax.set_ylabel("Percento (%)")
+        ax.set_ylim(0, 100)
+
+        for bar, size in zip(bars, sizes):
+            yval = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width() / 2.0, yval + 1, f'{size:.2f}%', ha='center', va='bottom')
+
+        plt.tight_layout()
+
+        return fig
 
 
 app = App(app_ui, server)
