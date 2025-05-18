@@ -1,10 +1,8 @@
 import pandas as pd
 
 from CorrelationAnalysis import analyze_diagnosis_relation
-from DiagnosisAnalysis import analyzuj_diagnozy_a_vyvoj_v_case
-from GenotypeAnalysis import analyze_genotypes
 from HardyWeinbergTest import hardy_weinberg_test
-from Plotter import plot_genotype_distributions
+
 
 
 def main():

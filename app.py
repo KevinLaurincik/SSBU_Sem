@@ -50,11 +50,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         df["vek"] = df["vek"].astype(str).str.replace(",", ".").astype(float)
         df.dropna(inplace=True)
 
-        # Keep original liver disease codes for analysis
-        # df["diagnoza_MKCH10"] = df["diagnoza_MKCH10"].replace({
-        #     "K76.0": "E66.9", "K75.9": "K75.8"
-        # })
-
         return df
 
     @render.text
@@ -77,10 +72,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         if df.empty:
             return None
 
-        # Get the plots from the analysis function
         plots = analyze_diagnosis_relation(df)
 
-        # Return the first plot (or could implement a selector for multiple genes)
         if plots and len(plots) > 0:
             return plots[0]
         return None
@@ -91,7 +84,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         if df.empty:
             return "Žiadne dáta k dispozícii"
 
-        # Prepare text output
         output = []
         df["pecenove_ochorenie"] = df["diagnoza_MKCH10"].str.upper().isin(["K76.0", "K75.9"])
 
@@ -171,7 +163,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         gene = input.gene_plot()
         plot_type = input.plot_type()
 
-        # Skontroluj, či sú null hodnoty v relevantných stĺpcoch
+        # Skontroluje, či sú null hodnoty v relevantných stĺpcoch
         if plot_type == "Boxplot (vek)":
             if df[[gene, "vek"]].isnull().values.any():
                 return None
@@ -186,7 +178,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             sns.boxplot(data=df, x=gene, y="vek", order=["normal", "heterozygot", "mutant"], ax=ax)
             ax.set_title(f"Vek podľa genotypu {gene}")
 
-            # Add count annotations for boxplot
+            # Početnosť
             counts = df[gene].value_counts().reindex(["normal", "heterozygot", "mutant"]).fillna(0).astype(int)
             for i, count in enumerate(counts):
                 ax.text(i, ax.get_ylim()[0], f'n={count}', ha='center', va='bottom', color='black', fontsize=9)
@@ -196,11 +188,10 @@ def server(input: Inputs, output: Outputs, session: Session):
             ax.set_title(f"Pohlavie podľa genotypu {gene}")
             ax.legend(title="Pohlavie")
 
-            # Add count annotations for countplot
+            # Početnosť
             for container in ax.containers:
                 ax.bar_label(container, fmt='%.0f', label_type='edge', padding=2)
 
-            # Adjust ylim to make room for labels
             y_max = max([p.get_height() for p in ax.patches])
             ax.set_ylim(0, y_max * 1.1)
 
